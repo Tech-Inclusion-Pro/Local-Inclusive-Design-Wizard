@@ -75,6 +75,25 @@ Visual indicators show:
 - Completion percentage
 - Which topics have been covered
 
+### 📈 Personal Consult Overview
+**AI-powered analysis of your learning journey:**
+- **Behavior Analysis** - Identifies patterns in your questions and concerns
+- **Common Themes** - Discovers what topics you ask about most frequently
+- **Learning Progress** - Assesses how well you're understanding UDL and WCAG
+- **Personalized Suggestions** - Provides specific recommendations for improvement
+- **Saved Reports** - Keep and review all generated overviews over time
+- **Timestamped Notes** - Add reflections to each overview report
+- **Export to Document** - Create WCAG-accessible Word documents
+
+The overview analyzes ALL your consultations to show:
+1. **Common Support Questions** - What help you're seeking most often
+2. **Student Support Themes** - How you think about supporting learners
+3. **Universal Design Questions** - Your curiosity about UDL principles
+4. **Accessibility & Technology Questions** - Technical concerns you have
+5. **Learning Assessment** - Your growth in understanding accessibility
+6. **Actionable Recommendations** - Specific next steps to improve
+7. **Suggested Resources** - Topics and materials to explore next
+
 ---
 
 ## 💻 Installation
@@ -351,6 +370,34 @@ This transparency helps you **learn** accessibility principles, not just receive
 2. Click **"Export"** in the header
 3. Save as a Word document (.docx)
 4. Share with colleagues or keep for reference
+
+### Using Personal Consult Overview
+
+The Personal Consult Overview feature analyzes ALL your consultations to provide insights about your learning journey:
+
+**Generating an Overview:**
+1. Go to the **Dashboard**
+2. Click **"Consult Overview"** button (next to Tutorial)
+3. The AI will analyze all your consultation history
+4. Review the comprehensive report showing:
+   - Your common questions and themes
+   - How you approach student support
+   - Your understanding of UDL and WCAG
+   - Personalized recommendations for growth
+
+**Saving Overviews:**
+1. After generating an overview, click **"Save Report"**
+2. The overview appears in the **Personal Consult Overviews** section
+3. Click on any saved overview to view it again
+4. Add notes to track your reflections over time
+5. Export to Word document for sharing or records
+
+**Managing Saved Overviews:**
+- **View** - Click the overview card to read the full report
+- **Notes** - Add timestamped reflections to each overview
+- **Edit Title** - Customize the overview name for easy reference
+- **Export** - Create WCAG-accessible Word documents
+- **Delete** - Remove overviews you no longer need
 
 ---
 
