@@ -16,7 +16,7 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 from config.settings import COLORS
 from prompts.system_prompts import CONSULTATION_TYPES
-from core.database import DatabaseManager, Session
+from core.database import DatabaseManager, Session, ConsultOverview
 from core.auth import AuthManager
 
 
@@ -102,6 +102,8 @@ class ConsultOverviewDialog(QDialog):
         self.overview_content = ""
         self.worker = None
         self.generated_time = None
+        self.sessions_count = 0
+        self.saved_overview_id = None
 
         self.setWindowTitle("Consultation Overview")
         self.setModal(True)
@@ -236,6 +238,9 @@ class ConsultOverviewDialog(QDialog):
             )
             return
 
+        # Store sessions count for saving
+        self.sessions_count = len(sessions)
+
         # Gather all conversation data
         conversations_text = self._gather_conversations(sessions)
 
@@ -303,7 +308,7 @@ class ConsultOverviewDialog(QDialog):
         self.progress_bar.hide()
         self.generate_btn.setEnabled(True)
         self.export_btn.setEnabled(True)
-        self.status_label.setText("Overview generated successfully!")
+        self.status_label.setText("Overview generated and saved!")
         self.status_label.setStyleSheet(f"color: {COLORS['success']}; font-size: 13px;")
 
         # Set timestamp
@@ -311,6 +316,18 @@ class ConsultOverviewDialog(QDialog):
         self.timestamp_label.setText(
             f"Generated: {self.generated_time.strftime('%B %d, %Y at %I:%M %p')}"
         )
+
+        # Save to database
+        user = self.auth.get_current_user()
+        if user:
+            title = f"Overview - {self.generated_time.strftime('%B %d, %Y at %I:%M %p')}"
+            overview = self.db.create_overview(
+                user_id=user.id,
+                title=title,
+                content=self.overview_content,
+                sessions_analyzed=self.sessions_count
+            )
+            self.saved_overview_id = overview.id
 
     @pyqtSlot(str)
     def on_generation_error(self, error_msg: str):
@@ -625,6 +642,475 @@ class NotesDialog(QDialog):
 
         self.note_added.emit(self.session_id, content)
         self.accept()
+
+
+class OverviewNotesDialog(QDialog):
+    """Dialog for viewing and adding notes to an overview."""
+
+    note_added = pyqtSignal(int, str)  # overview_id, note_content
+
+    def __init__(self, overview_id: int, overview_title: str, notes: list, parent=None):
+        super().__init__(parent)
+        self.overview_id = overview_id
+        self.notes = notes
+        self.setWindowTitle(f"Notes - {overview_title}")
+        self.setModal(True)
+        self.setMinimumSize(500, 450)
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Set up the notes dialog UI."""
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {COLORS['dark_card']};
+            }}
+            QLabel {{
+                color: {COLORS['text']};
+            }}
+            QTextEdit {{
+                background-color: {COLORS['dark_input']};
+                color: {COLORS['text']};
+                border: 1px solid {COLORS['dark_input']};
+                border-radius: 8px;
+                padding: 8px;
+                font-size: 14px;
+            }}
+            QTextEdit:focus {{
+                border: 1px solid {COLORS['primary']};
+            }}
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+        layout.setContentsMargins(24, 24, 24, 24)
+
+        # Title
+        title = QLabel("Overview Notes")
+        title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
+        layout.addWidget(title)
+
+        # Existing notes section
+        notes_label = QLabel("Previous Notes")
+        notes_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        layout.addWidget(notes_label)
+
+        # Notes scroll area
+        notes_scroll = QScrollArea()
+        notes_scroll.setWidgetResizable(True)
+        notes_scroll.setMaximumHeight(200)
+        notes_scroll.setStyleSheet(f"""
+            QScrollArea {{
+                border: 1px solid {COLORS['dark_input']};
+                border-radius: 8px;
+                background-color: {COLORS['dark_bg']};
+            }}
+        """)
+
+        notes_container = QWidget()
+        notes_layout = QVBoxLayout(notes_container)
+        notes_layout.setSpacing(8)
+        notes_layout.setContentsMargins(8, 8, 8, 8)
+
+        if self.notes:
+            for note in reversed(self.notes):
+                note_frame = QFrame()
+                note_frame.setStyleSheet(f"""
+                    QFrame {{
+                        background-color: {COLORS['dark_input']};
+                        border-radius: 6px;
+                        padding: 8px;
+                    }}
+                """)
+                note_layout_inner = QVBoxLayout(note_frame)
+                note_layout_inner.setSpacing(4)
+                note_layout_inner.setContentsMargins(8, 8, 8, 8)
+
+                timestamp = datetime.fromisoformat(note['timestamp'])
+                time_label = QLabel(timestamp.strftime("%b %d, %Y at %I:%M %p"))
+                time_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+                note_layout_inner.addWidget(time_label)
+
+                content_label = QLabel(note['content'])
+                content_label.setWordWrap(True)
+                content_label.setStyleSheet(f"color: {COLORS['text']}; font-size: 13px;")
+                note_layout_inner.addWidget(content_label)
+
+                notes_layout.addWidget(note_frame)
+        else:
+            empty_label = QLabel("No notes yet. Add your first note below!")
+            empty_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-style: italic;")
+            empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            notes_layout.addWidget(empty_label)
+
+        notes_layout.addStretch()
+        notes_scroll.setWidget(notes_container)
+        layout.addWidget(notes_scroll)
+
+        # Add new note section
+        new_note_label = QLabel("Add New Note")
+        new_note_label.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        layout.addWidget(new_note_label)
+
+        self.note_input = QTextEdit()
+        self.note_input.setPlaceholderText("Type your note here...")
+        self.note_input.setAccessibleName("New note input")
+        self.note_input.setMinimumHeight(80)
+        self.note_input.setMaximumHeight(120)
+        layout.addWidget(self.note_input)
+
+        # Buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(12)
+
+        close_btn = QPushButton("Close")
+        close_btn.setProperty("class", "secondary")
+        close_btn.clicked.connect(self.reject)
+        close_btn.setMinimumHeight(44)
+        btn_layout.addWidget(close_btn)
+
+        btn_layout.addStretch()
+
+        save_btn = QPushButton("Save Note")
+        save_btn.clicked.connect(self.save_note)
+        save_btn.setMinimumHeight(44)
+        save_btn.setMinimumWidth(120)
+        btn_layout.addWidget(save_btn)
+
+        layout.addLayout(btn_layout)
+
+    def save_note(self):
+        """Save the new note."""
+        content = self.note_input.toPlainText().strip()
+        if not content:
+            QMessageBox.warning(self, "Empty Note", "Please enter some text for your note.")
+            return
+
+        self.note_added.emit(self.overview_id, content)
+        self.accept()
+
+
+class ViewOverviewDialog(QDialog):
+    """Dialog for viewing a saved overview."""
+
+    def __init__(self, overview: ConsultOverview, parent=None):
+        super().__init__(parent)
+        self.overview = overview
+        self.setWindowTitle(overview.title)
+        self.setModal(True)
+        self.setMinimumSize(700, 550)
+        self.setup_ui()
+
+    def setup_ui(self):
+        """Set up the view dialog UI."""
+        self.setStyleSheet(f"""
+            QDialog {{
+                background-color: {COLORS['dark_card']};
+            }}
+            QLabel {{
+                color: {COLORS['text']};
+            }}
+            QTextEdit {{
+                background-color: {COLORS['dark_input']};
+                color: {COLORS['text']};
+                border: 1px solid {COLORS['dark_input']};
+                border-radius: 8px;
+                padding: 12px;
+                font-size: 14px;
+            }}
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(16)
+        layout.setContentsMargins(24, 24, 24, 24)
+
+        # Header
+        header_layout = QHBoxLayout()
+
+        title = QLabel(self.overview.title)
+        title.setFont(QFont("Arial", 20, QFont.Weight.Bold))
+        header_layout.addWidget(title)
+
+        header_layout.addStretch()
+
+        # Metadata
+        meta_layout = QVBoxLayout()
+        created_label = QLabel(f"Created: {self.overview.created_at.strftime('%B %d, %Y at %I:%M %p')}")
+        created_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+        meta_layout.addWidget(created_label)
+
+        sessions_label = QLabel(f"Sessions analyzed: {self.overview.sessions_analyzed}")
+        sessions_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+        meta_layout.addWidget(sessions_label)
+
+        header_layout.addLayout(meta_layout)
+        layout.addLayout(header_layout)
+
+        # Content
+        content_area = QTextEdit()
+        content_area.setReadOnly(True)
+        content_area.setPlainText(self.overview.content)
+        layout.addWidget(content_area)
+
+        # Buttons
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(12)
+
+        export_btn = QPushButton("Export Document")
+        export_btn.setProperty("class", "secondary")
+        export_btn.clicked.connect(self.export_overview)
+        export_btn.setMinimumHeight(44)
+        btn_layout.addWidget(export_btn)
+
+        btn_layout.addStretch()
+
+        close_btn = QPushButton("Close")
+        close_btn.clicked.connect(self.accept)
+        close_btn.setMinimumHeight(44)
+        close_btn.setMinimumWidth(100)
+        btn_layout.addWidget(close_btn)
+
+        layout.addLayout(btn_layout)
+
+    def export_overview(self):
+        """Export the overview to a Word document."""
+        filepath, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export Overview",
+            f"overview_{self.overview.created_at.strftime('%Y%m%d_%H%M')}.docx",
+            "Word Document (*.docx)"
+        )
+
+        if not filepath:
+            return
+
+        if not filepath.endswith(".docx"):
+            filepath += ".docx"
+
+        try:
+            self._create_document(filepath)
+            QMessageBox.information(self, "Export Successful", f"Overview exported to:\n{filepath}")
+        except Exception as e:
+            QMessageBox.warning(self, "Export Failed", f"Failed to export: {str(e)}")
+
+    def _create_document(self, filepath: str):
+        """Create a WCAG-accessible Word document."""
+        doc = Document()
+
+        doc.core_properties.title = self.overview.title
+        doc.core_properties.subject = "Consultation Overview"
+
+        # Title
+        title = doc.add_heading(self.overview.title, 0)
+        title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+        # Metadata
+        meta = doc.add_paragraph()
+        meta.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        meta.add_run(f"Generated: {self.overview.created_at.strftime('%B %d, %Y at %I:%M %p')}\n")
+        meta.add_run(f"Sessions Analyzed: {self.overview.sessions_analyzed}")
+
+        doc.add_paragraph()
+
+        # Content
+        lines = self.overview.content.split('\n')
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            if line.startswith('## '):
+                doc.add_heading(line[3:], level=1)
+            elif line.startswith('### '):
+                doc.add_heading(line[4:], level=2)
+            elif line.startswith('# '):
+                doc.add_heading(line[2:], level=1)
+            elif line.startswith('- ') or line.startswith('* '):
+                doc.add_paragraph(line[2:], style='List Bullet')
+            elif line.startswith('• '):
+                doc.add_paragraph(line[2:], style='List Bullet')
+            else:
+                doc.add_paragraph(line)
+
+        doc.save(filepath)
+
+
+class OverviewCard(QFrame):
+    """Card widget for displaying a saved overview."""
+
+    open_requested = pyqtSignal(int)
+    delete_requested = pyqtSignal(int)
+    notes_requested = pyqtSignal(int, str)
+    title_changed = pyqtSignal(int, str)
+
+    def __init__(self, overview: ConsultOverview):
+        super().__init__()
+        self.overview_id = overview.id
+        self.overview_title = overview.title
+        self.original_title = overview.title
+        self.setup_ui(overview)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+
+    def setup_ui(self, overview: ConsultOverview):
+        """Set up the card UI."""
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {COLORS['dark_card']};
+                border-radius: 12px;
+                padding: 16px;
+                border-left: 4px solid {COLORS['secondary']};
+            }}
+            QFrame:hover {{
+                background-color: {COLORS['dark_input']};
+            }}
+        """)
+        self.setMinimumWidth(250)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(8)
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # Content area
+        content_widget = QWidget()
+        content_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        content_layout = QVBoxLayout(content_widget)
+        content_layout.setSpacing(6)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+
+        # Editable Title
+        self.title_input = QLineEdit(overview.title)
+        self.title_input.setFont(QFont("Arial", 14, QFont.Weight.Bold))
+        self.title_input.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: {COLORS['dark_input']};
+                color: {COLORS['text']};
+                border: 1px solid {COLORS['dark_input']};
+                border-radius: 6px;
+                padding: 6px 8px;
+            }}
+            QLineEdit:focus {{
+                border: 1px solid {COLORS['primary']};
+            }}
+        """)
+        self.title_input.setAccessibleName("Edit overview title")
+        self.title_input.editingFinished.connect(self.on_title_changed)
+        content_layout.addWidget(self.title_input)
+
+        # Type badge
+        type_label = QLabel("Overview Report")
+        type_label.setStyleSheet(f"""
+            background-color: {COLORS['secondary']};
+            color: {COLORS['text']};
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        """)
+        type_label.setMaximumWidth(120)
+        type_label.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        content_layout.addWidget(type_label)
+
+        # Sessions analyzed
+        sessions_label = QLabel(f"Sessions analyzed: {overview.sessions_analyzed}")
+        sessions_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 12px;")
+        content_layout.addWidget(sessions_label)
+
+        # Created date
+        created_label = QLabel(f"Created: {overview.created_at.strftime('%b %d, %Y at %I:%M %p')}")
+        created_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+        content_layout.addWidget(created_label)
+
+        layout.addWidget(content_widget)
+        layout.addStretch(1)
+
+        # Actions row
+        actions_widget = QWidget()
+        actions_widget.setFixedHeight(28)
+        actions_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        actions = QHBoxLayout(actions_widget)
+        actions.setSpacing(6)
+        actions.setContentsMargins(0, 4, 0, 0)
+
+        # Open button
+        open_btn = QPushButton("Open")
+        open_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['success']};
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 2px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                min-height: 20px;
+                max-height: 24px;
+            }}
+            QPushButton:hover {{
+                background-color: #27ae60;
+            }}
+        """)
+        open_btn.setFixedSize(50, 24)
+        open_btn.clicked.connect(lambda: self.open_requested.emit(self.overview_id))
+        open_btn.setAccessibleName(f"Open {overview.title}")
+        actions.addWidget(open_btn)
+
+        # Notes button
+        notes_btn = QPushButton("Notes")
+        notes_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['primary']};
+                color: white;
+                border: none;
+                border-radius: 4px;
+                padding: 2px 8px;
+                font-size: 11px;
+                font-weight: bold;
+                min-height: 20px;
+                max-height: 24px;
+            }}
+            QPushButton:hover {{
+                background-color: #5849c4;
+            }}
+        """)
+        notes_btn.setFixedSize(55, 24)
+        notes_btn.clicked.connect(lambda: self.notes_requested.emit(self.overview_id, self.overview_title))
+        notes_btn.setAccessibleName(f"Notes for {overview.title}")
+        actions.addWidget(notes_btn)
+
+        actions.addStretch()
+
+        # Delete button
+        delete_btn = QPushButton("Delete")
+        delete_btn.setStyleSheet(f"""
+            QPushButton {{
+                background-color: transparent;
+                color: {COLORS['error']};
+                border: 1px solid {COLORS['error']};
+                border-radius: 4px;
+                padding: 2px 6px;
+                font-size: 10px;
+                min-height: 18px;
+                max-height: 22px;
+            }}
+            QPushButton:hover {{
+                background-color: {COLORS['error']};
+                color: white;
+            }}
+        """)
+        delete_btn.setFixedSize(50, 22)
+        delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.overview_id))
+        delete_btn.setAccessibleName(f"Delete {overview.title}")
+        actions.addWidget(delete_btn)
+
+        layout.addWidget(actions_widget)
+
+        self.setAccessibleName(f"{overview.title}. Overview Report. {overview.sessions_analyzed} sessions analyzed.")
+
+    def on_title_changed(self):
+        """Handle title edit completion."""
+        new_title = self.title_input.text().strip()
+        if new_title and new_title != self.original_title:
+            self.title_changed.emit(self.overview_id, new_title)
+            self.original_title = new_title
+            self.overview_title = new_title
 
 
 class TutorialDialog(QDialog):
@@ -1236,11 +1722,40 @@ class DashboardWidget(QWidget):
         self.sessions_area.setWidget(self.sessions_container)
         layout.addWidget(self.sessions_area)
 
+        # Personal Consult Overview section
+        layout.addSpacing(24)
+
+        overviews_header = QHBoxLayout()
+
+        overviews_label = QLabel("Personal Consult Overviews")
+        overviews_label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
+        overviews_header.addWidget(overviews_label)
+
+        layout.addLayout(overviews_header)
+
+        # Overviews scroll area
+        self.overviews_area = QScrollArea()
+        self.overviews_area.setWidgetResizable(True)
+        self.overviews_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.overviews_area.setAccessibleName("Personal consultation overviews")
+        self.overviews_area.setFocusPolicy(Qt.FocusPolicy.TabFocus)
+
+        self.overviews_container = QWidget()
+        self.overviews_layout = QGridLayout(self.overviews_container)
+        self.overviews_layout.setSpacing(16)
+        self.overviews_layout.setColumnStretch(0, 1)
+        self.overviews_layout.setColumnStretch(1, 1)
+        self.overviews_layout.setColumnStretch(2, 1)
+
+        self.overviews_area.setWidget(self.overviews_container)
+        layout.addWidget(self.overviews_area)
+
         # Add scroll content to main scroll area
         scroll.setWidget(scroll_content)
         main_layout.addWidget(scroll)
 
         self.load_sessions()
+        self.load_overviews()
 
     def load_sessions(self):
         """Load and display user sessions."""
@@ -1312,6 +1827,7 @@ class DashboardWidget(QWidget):
     def refresh(self):
         """Refresh the dashboard."""
         self.load_sessions()
+        self.load_overviews()
 
     def show_tutorial(self):
         """Show the dashboard tutorial."""
@@ -1346,3 +1862,80 @@ class DashboardWidget(QWidget):
 
         dialog = ConsultOverviewDialog(self.db, self.auth, self.ai, self)
         dialog.exec()
+        # Refresh overviews list after dialog closes
+        self.load_overviews()
+
+    def load_overviews(self):
+        """Load and display user overviews."""
+        # Clear existing cards
+        while self.overviews_layout.count():
+            item = self.overviews_layout.takeAt(0)
+            if item.widget():
+                item.widget().deleteLater()
+
+        user = self.auth.get_current_user()
+        if not user:
+            return
+
+        overviews = self.db.get_user_overviews(user.id)
+
+        if not overviews:
+            empty_label = QLabel("No overviews yet. Click 'Consult Overview' to generate one!")
+            empty_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 14px;")
+            empty_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.overviews_layout.addWidget(empty_label, 0, 0)
+            return
+
+        # Display in grid (3 columns)
+        for i, overview in enumerate(overviews[:9]):  # Show last 9
+            row = i // 3
+            col = i % 3
+
+            card = OverviewCard(overview)
+            card.open_requested.connect(self.open_overview)
+            card.delete_requested.connect(self.confirm_delete_overview)
+            card.notes_requested.connect(self.show_overview_notes_dialog)
+            card.title_changed.connect(self.save_overview_title)
+
+            self.overviews_layout.addWidget(card, row, col)
+
+    def open_overview(self, overview_id: int):
+        """Open a saved overview."""
+        overview = self.db.get_overview_by_id(overview_id)
+        if overview:
+            dialog = ViewOverviewDialog(overview, self)
+            dialog.exec()
+
+    def confirm_delete_overview(self, overview_id: int):
+        """Confirm and delete an overview."""
+        reply = QMessageBox.question(
+            self,
+            "Delete Overview",
+            "Are you sure you want to delete this overview? This action cannot be undone.",
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No
+        )
+
+        if reply == QMessageBox.StandardButton.Yes:
+            self.db.delete_overview(overview_id)
+            self.load_overviews()
+
+    def show_overview_notes_dialog(self, overview_id: int, overview_title: str):
+        """Show the notes dialog for an overview."""
+        notes = self.db.get_overview_notes(overview_id)
+        dialog = OverviewNotesDialog(overview_id, overview_title, notes, self)
+        dialog.note_added.connect(self.save_overview_note)
+        dialog.exec()
+
+    def save_overview_note(self, overview_id: int, note_content: str):
+        """Save a note to an overview."""
+        self.db.add_overview_note(overview_id, note_content)
+        QMessageBox.information(
+            self,
+            "Note Saved",
+            "Your note has been saved with a timestamp."
+        )
+
+    def save_overview_title(self, overview_id: int, new_title: str):
+        """Save updated overview title."""
+        self.db.update_overview_title(overview_id, new_title)

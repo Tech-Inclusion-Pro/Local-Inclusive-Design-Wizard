@@ -40,6 +40,7 @@ class User(Base):
     security_answer_2 = Column(String(255), nullable=True)
 
     sessions = relationship("Session", back_populates="user", cascade="all, delete-orphan")
+    overviews = relationship("ConsultOverview", back_populates="user", cascade="all, delete-orphan")
 
     @property
     def settings(self) -> dict:
@@ -114,6 +115,38 @@ class Session(Base):
         self.conversation = conv
 
 
+class ConsultOverview(Base):
+    """Saved consultation overview report model."""
+    __tablename__ = "consult_overviews"
+
+    id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    title = Column(String(255), default="Consultation Overview")
+    content = Column(Text, default="")
+    notes_json = Column(Text, default="[]")
+    sessions_analyzed = Column(Integer, default=0)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    user = relationship("User", back_populates="overviews")
+
+    @property
+    def notes(self) -> list:
+        return json.loads(self.notes_json or "[]")
+
+    @notes.setter
+    def notes(self, value: list):
+        self.notes_json = json.dumps(value)
+
+    def add_note(self, content: str):
+        """Add a timestamped note."""
+        notes_list = self.notes
+        notes_list.append({
+            "content": content,
+            "timestamp": datetime.utcnow().isoformat()
+        })
+        self.notes = notes_list
+
+
 class DatabaseManager:
     """Database connection and session management."""
 
@@ -160,6 +193,10 @@ class DatabaseManager:
             if 'notes_json' not in session_columns:
                 conn.execute(text('ALTER TABLE sessions ADD COLUMN notes_json TEXT DEFAULT "[]"'))
             conn.commit()
+
+        # Create consult_overviews table if it doesn't exist
+        if 'consult_overviews' not in inspector.get_table_names():
+            ConsultOverview.__table__.create(self.engine)
 
     def get_session(self):
         """Get a new database session."""
@@ -307,3 +344,81 @@ class DatabaseManager:
             return False
         finally:
             session.close()
+
+    # Consult Overview methods
+    def create_overview(self, user_id: int, title: str, content: str, sessions_analyzed: int) -> ConsultOverview:
+        """Create a new consultation overview."""
+        session = self.get_session()
+        try:
+            overview = ConsultOverview(
+                user_id=user_id,
+                title=title,
+                content=content,
+                sessions_analyzed=sessions_analyzed
+            )
+            session.add(overview)
+            session.commit()
+            session.refresh(overview)
+            return overview
+        finally:
+            session.close()
+
+    def get_user_overviews(self, user_id: int) -> list:
+        """Get all overviews for a user."""
+        session = self.get_session()
+        try:
+            return session.query(ConsultOverview).filter(
+                ConsultOverview.user_id == user_id
+            ).order_by(ConsultOverview.created_at.desc()).all()
+        finally:
+            session.close()
+
+    def get_overview_by_id(self, overview_id: int) -> ConsultOverview:
+        """Get overview by ID."""
+        session = self.get_session()
+        try:
+            return session.query(ConsultOverview).filter(ConsultOverview.id == overview_id).first()
+        finally:
+            session.close()
+
+    def delete_overview(self, overview_id: int):
+        """Delete an overview."""
+        session = self.get_session()
+        try:
+            overview = session.query(ConsultOverview).filter(ConsultOverview.id == overview_id).first()
+            if overview:
+                session.delete(overview)
+                session.commit()
+        finally:
+            session.close()
+
+    def add_overview_note(self, overview_id: int, note_content: str):
+        """Add a timestamped note to an overview."""
+        db_session = self.get_session()
+        try:
+            overview = db_session.query(ConsultOverview).filter(ConsultOverview.id == overview_id).first()
+            if overview:
+                overview.add_note(note_content)
+                db_session.commit()
+        finally:
+            db_session.close()
+
+    def get_overview_notes(self, overview_id: int) -> list:
+        """Get all notes for an overview."""
+        db_session = self.get_session()
+        try:
+            overview = db_session.query(ConsultOverview).filter(ConsultOverview.id == overview_id).first()
+            return overview.notes if overview else []
+        finally:
+            db_session.close()
+
+    def update_overview_title(self, overview_id: int, new_title: str):
+        """Update an overview's title."""
+        db_session = self.get_session()
+        try:
+            overview = db_session.query(ConsultOverview).filter(ConsultOverview.id == overview_id).first()
+            if overview:
+                overview.title = new_title
+                db_session.commit()
+        finally:
+            db_session.close()
