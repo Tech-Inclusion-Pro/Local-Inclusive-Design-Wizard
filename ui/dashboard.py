@@ -1632,14 +1632,6 @@ class DashboardWidget(QWidget):
         header.addStretch()
 
         # Header buttons
-        tutorial_btn = QPushButton("Tutorial")
-        tutorial_btn.setProperty("class", "secondary")
-        tutorial_btn.setAccessibleName("Open tutorial")
-        tutorial_btn.setToolTip("Learn how to use the dashboard")
-        tutorial_btn.clicked.connect(self.show_tutorial)
-        tutorial_btn.setMinimumHeight(44)
-        header.addWidget(tutorial_btn)
-
         new_consult_btn = QPushButton("Start New Consultation")
         new_consult_btn.setAccessibleName("Start a new consultation")
         new_consult_btn.setToolTip("Begin a comprehensive accessibility review")
@@ -1661,6 +1653,14 @@ class DashboardWidget(QWidget):
         settings_btn.clicked.connect(self.open_settings.emit)
         settings_btn.setMinimumHeight(44)
         header.addWidget(settings_btn)
+
+        tutorial_btn = QPushButton("Tutorial")
+        tutorial_btn.setProperty("class", "secondary")
+        tutorial_btn.setAccessibleName("Open tutorial")
+        tutorial_btn.setToolTip("Learn how to use the dashboard")
+        tutorial_btn.clicked.connect(self.show_tutorial)
+        tutorial_btn.setMinimumHeight(44)
+        header.addWidget(tutorial_btn)
 
         logout_btn = QPushButton("Log Out")
         logout_btn.setProperty("class", "text")
