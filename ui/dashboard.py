@@ -1568,7 +1568,6 @@ class DashboardWidget(QWidget):
 
     open_session = pyqtSignal(int)
     new_session = pyqtSignal(str, str)
-    quick_action = pyqtSignal(str, str)  # For temporary sessions (not auto-saved)
     open_settings = pyqtSignal()
     logout = pyqtSignal()
 
@@ -1641,6 +1640,13 @@ class DashboardWidget(QWidget):
         tutorial_btn.setMinimumHeight(44)
         header.addWidget(tutorial_btn)
 
+        new_consult_btn = QPushButton("Start New Consultation")
+        new_consult_btn.setAccessibleName("Start a new consultation")
+        new_consult_btn.setToolTip("Begin a comprehensive accessibility review")
+        new_consult_btn.clicked.connect(self.show_new_session_dialog)
+        new_consult_btn.setMinimumHeight(44)
+        header.addWidget(new_consult_btn)
+
         overview_btn = QPushButton("Consult Overview")
         overview_btn.setProperty("class", "secondary")
         overview_btn.setAccessibleName("View overview of all consultations")
@@ -1663,37 +1669,6 @@ class DashboardWidget(QWidget):
         header.addWidget(logout_btn)
 
         layout.addLayout(header)
-
-        # Quick actions section
-        actions_label = QLabel("Quick Actions")
-        actions_label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
-        layout.addWidget(actions_label)
-
-        actions_layout = QHBoxLayout()
-        actions_layout.setSpacing(16)
-
-        quick_actions = [
-            ("Start New Consultation", "custom", "Begin a comprehensive accessibility review"),
-        ]
-
-        for name, type_key, tooltip in quick_actions:
-            btn = QPushButton(name)
-            btn.setToolTip(tooltip)
-            btn.setAccessibleDescription(tooltip)
-            btn.setMinimumHeight(60)
-            btn.setMinimumWidth(180)
-
-            if type_key == "custom":
-                # Primary button for main action
-                pass
-            else:
-                btn.setProperty("class", "secondary")
-
-            btn.clicked.connect(lambda checked, t=type_key, n=name: self.start_quick_session(t, n))
-            actions_layout.addWidget(btn)
-
-        actions_layout.addStretch()
-        layout.addLayout(actions_layout)
 
         # Recent sessions section
         sessions_header = QHBoxLayout()
@@ -1790,14 +1765,6 @@ class DashboardWidget(QWidget):
             card.notes_requested.connect(self.show_notes_dialog)
 
             self.sessions_layout.addWidget(card, row, col)
-
-    def start_quick_session(self, type_key: str, name: str):
-        """Start a quick session with preset type (temporary, not auto-saved)."""
-        if type_key == "custom":
-            self.show_new_session_dialog()
-        else:
-            title = f"{name} - {datetime.now().strftime('%b %d, %Y')}"
-            self.quick_action.emit(title, type_key)
 
     def show_new_session_dialog(self):
         """Show dialog to create new session."""

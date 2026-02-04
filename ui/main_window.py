@@ -73,7 +73,6 @@ class MainWindow(QMainWindow):
         self.dashboard_page = DashboardWidget(self.db, self.auth, self.ai)
         self.dashboard_page.open_session.connect(self.open_session)
         self.dashboard_page.new_session.connect(self.create_session)
-        self.dashboard_page.quick_action.connect(self.start_quick_action)
         self.dashboard_page.open_settings.connect(self.open_settings)
         self.dashboard_page.logout.connect(self.logout)
         self.stack.addWidget(self.dashboard_page)
@@ -119,16 +118,6 @@ class MainWindow(QMainWindow):
 
         session = self.conversation.start_new_session(user.id, title, template_type)
         self.chat_page.load_session(session.id)
-        self.stack.setCurrentWidget(self.chat_page)
-
-    def start_quick_action(self, title: str, template_type: str):
-        """Start a quick action as a temporary session (not saved until user clicks Save)."""
-        user = self.auth.get_current_user()
-        if not user:
-            return
-
-        self.conversation.start_temporary_session(user.id, title, template_type)
-        self.chat_page.load_temporary_session()
         self.stack.setCurrentWidget(self.chat_page)
 
     def on_session_saved(self):
