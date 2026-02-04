@@ -70,7 +70,7 @@ class MainWindow(QMainWindow):
         self.stack.addWidget(self.login_page)
 
         # Dashboard page
-        self.dashboard_page = DashboardWidget(self.db, self.auth)
+        self.dashboard_page = DashboardWidget(self.db, self.auth, self.ai)
         self.dashboard_page.open_session.connect(self.open_session)
         self.dashboard_page.new_session.connect(self.create_session)
         self.dashboard_page.quick_action.connect(self.start_quick_action)
