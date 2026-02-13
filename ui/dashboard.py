@@ -14,7 +14,7 @@ from docx import Document
 from docx.shared import Pt, RGBColor, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
-from config.settings import COLORS
+from config.settings import COLORS, get_colors
 from prompts.system_prompts import CONSULTATION_TYPES
 from core.database import DatabaseManager, Session, ConsultOverview
 from core.auth import AuthManager
@@ -951,29 +951,31 @@ class OverviewCard(QFrame):
 
     def setup_ui(self, overview: ConsultOverview):
         """Set up the card UI."""
+        colors = get_colors()
         self.setStyleSheet(f"""
             QFrame {{
-                background-color: {COLORS['dark_card']};
+                background-color: {colors['dark_card']};
+                border: 1px solid {colors.get('dark_border', '#1c2a4a')};
                 border-radius: 12px;
-                padding: 16px;
-                border-left: 4px solid {COLORS['secondary']};
+                padding: 20px;
+                border-left: 4px solid {colors['secondary']};
             }}
             QFrame:hover {{
-                background-color: {COLORS['dark_input']};
+                background-color: {colors.get('dark_hover', '#1a2d50')};
             }}
         """)
         self.setMinimumWidth(250)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         layout = QVBoxLayout(self)
-        layout.setSpacing(8)
+        layout.setSpacing(10)
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Content area
         content_widget = QWidget()
         content_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setSpacing(6)
+        content_layout.setSpacing(10)
         content_layout.setContentsMargins(0, 0, 0, 0)
 
         # Editable Title
@@ -981,14 +983,14 @@ class OverviewCard(QFrame):
         self.title_input.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         self.title_input.setStyleSheet(f"""
             QLineEdit {{
-                background-color: {COLORS['dark_input']};
-                color: {COLORS['text']};
-                border: 1px solid {COLORS['dark_input']};
+                background-color: {colors['dark_input']};
+                color: {colors['text']};
+                border: 1px solid {colors['dark_input']};
                 border-radius: 6px;
                 padding: 6px 8px;
             }}
             QLineEdit:focus {{
-                border: 1px solid {COLORS['primary']};
+                border: 1px solid {colors['primary']};
             }}
         """)
         self.title_input.setAccessibleName("Edit overview title")
@@ -998,8 +1000,8 @@ class OverviewCard(QFrame):
         # Type badge
         type_label = QLabel("Overview Report")
         type_label.setStyleSheet(f"""
-            background-color: {COLORS['secondary']};
-            color: {COLORS['text']};
+            background-color: {colors['secondary']};
+            color: {colors['text']};
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 11px;
@@ -1010,12 +1012,12 @@ class OverviewCard(QFrame):
 
         # Sessions analyzed
         sessions_label = QLabel(f"Sessions analyzed: {overview.sessions_analyzed}")
-        sessions_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 12px;")
+        sessions_label.setStyleSheet(f"color: {colors['text_muted']}; font-size: 12px;")
         content_layout.addWidget(sessions_label)
 
         # Created date
         created_label = QLabel(f"Created: {overview.created_at.strftime('%b %d, %Y at %I:%M %p')}")
-        created_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+        created_label.setStyleSheet(f"color: {colors['text_muted']}; font-size: 11px;")
         content_layout.addWidget(created_label)
 
         layout.addWidget(content_widget)
@@ -1023,7 +1025,7 @@ class OverviewCard(QFrame):
 
         # Actions row
         actions_widget = QWidget()
-        actions_widget.setFixedHeight(28)
+        actions_widget.setMinimumHeight(48)
         actions_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         actions = QHBoxLayout(actions_widget)
         actions.setSpacing(6)
@@ -1033,21 +1035,19 @@ class OverviewCard(QFrame):
         open_btn = QPushButton("Open")
         open_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {COLORS['success']};
+                background-color: {colors['success']};
                 color: white;
                 border: none;
-                border-radius: 4px;
-                padding: 2px 8px;
-                font-size: 11px;
+                border-radius: 8px;
+                padding: 4px 12px;
                 font-weight: bold;
-                min-height: 20px;
-                max-height: 24px;
+                min-height: 36px;
             }}
             QPushButton:hover {{
                 background-color: #27ae60;
             }}
         """)
-        open_btn.setFixedSize(50, 24)
+        open_btn.setMinimumHeight(44)
         open_btn.clicked.connect(lambda: self.open_requested.emit(self.overview_id))
         open_btn.setAccessibleName(f"Open {overview.title}")
         actions.addWidget(open_btn)
@@ -1056,21 +1056,19 @@ class OverviewCard(QFrame):
         notes_btn = QPushButton("Notes")
         notes_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {COLORS['primary']};
+                background-color: {colors['primary']};
                 color: white;
                 border: none;
-                border-radius: 4px;
-                padding: 2px 8px;
-                font-size: 11px;
+                border-radius: 8px;
+                padding: 4px 12px;
                 font-weight: bold;
-                min-height: 20px;
-                max-height: 24px;
+                min-height: 36px;
             }}
             QPushButton:hover {{
                 background-color: #5849c4;
             }}
         """)
-        notes_btn.setFixedSize(55, 24)
+        notes_btn.setMinimumHeight(44)
         notes_btn.clicked.connect(lambda: self.notes_requested.emit(self.overview_id, self.overview_title))
         notes_btn.setAccessibleName(f"Notes for {overview.title}")
         actions.addWidget(notes_btn)
@@ -1082,20 +1080,18 @@ class OverviewCard(QFrame):
         delete_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: transparent;
-                color: {COLORS['error']};
-                border: 1px solid {COLORS['error']};
-                border-radius: 4px;
-                padding: 2px 6px;
-                font-size: 10px;
-                min-height: 18px;
-                max-height: 22px;
+                color: {colors['error']};
+                border: 1px solid {colors['error']};
+                border-radius: 8px;
+                padding: 4px 8px;
+                min-height: 36px;
             }}
             QPushButton:hover {{
-                background-color: {COLORS['error']};
+                background-color: {colors['error']};
                 color: white;
             }}
         """)
-        delete_btn.setFixedSize(50, 22)
+        delete_btn.setMinimumHeight(44)
         delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.overview_id))
         delete_btn.setAccessibleName(f"Delete {overview.title}")
         actions.addWidget(delete_btn)
@@ -1292,28 +1288,30 @@ class SessionCard(QFrame):
 
     def setup_ui(self, session: Session):
         """Set up the card UI."""
+        colors = get_colors()
         self.setStyleSheet(f"""
             QFrame {{
-                background-color: {COLORS['dark_card']};
+                background-color: {colors['dark_card']};
+                border: 1px solid {colors.get('dark_border', '#1c2a4a')};
                 border-radius: 12px;
-                padding: 16px;
+                padding: 20px;
             }}
             QFrame:hover {{
-                background-color: {COLORS['dark_input']};
+                background-color: {colors.get('dark_hover', '#1a2d50')};
             }}
         """)
         self.setMinimumWidth(250)
         self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 
         layout = QVBoxLayout(self)
-        layout.setSpacing(8)
+        layout.setSpacing(10)
         layout.setContentsMargins(0, 0, 0, 0)
 
         # Content area - holds all text elements
         content_widget = QWidget()
         content_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setSpacing(6)
+        content_layout.setSpacing(10)
         content_layout.setContentsMargins(0, 0, 0, 0)
 
         # Editable Title
@@ -1321,14 +1319,14 @@ class SessionCard(QFrame):
         self.title_input.setFont(QFont("Arial", 14, QFont.Weight.Bold))
         self.title_input.setStyleSheet(f"""
             QLineEdit {{
-                background-color: {COLORS['dark_input']};
-                color: {COLORS['text']};
-                border: 1px solid {COLORS['dark_input']};
+                background-color: {colors['dark_input']};
+                color: {colors['text']};
+                border: 1px solid {colors['dark_input']};
                 border-radius: 6px;
                 padding: 6px 8px;
             }}
             QLineEdit:focus {{
-                border: 1px solid {COLORS['primary']};
+                border: 1px solid {colors['primary']};
             }}
         """)
         self.title_input.setAccessibleName("Edit consultation title")
@@ -1339,8 +1337,8 @@ class SessionCard(QFrame):
         type_name = CONSULTATION_TYPES.get(session.template_type, {}).get("name", "Custom")
         type_label = QLabel(type_name)
         type_label.setStyleSheet(f"""
-            background-color: {COLORS['secondary']};
-            color: {COLORS['text']};
+            background-color: {colors['secondary']};
+            color: {colors['text']};
             padding: 4px 8px;
             border-radius: 4px;
             font-size: 11px;
@@ -1352,7 +1350,7 @@ class SessionCard(QFrame):
         # Status
         status_text = "Complete" if session.completed else f"In Progress - {session.current_phase}"
         status = QLabel(status_text)
-        status.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 12px;")
+        status.setStyleSheet(f"color: {colors['text_muted']}; font-size: 12px;")
         status.setWordWrap(True)
         content_layout.addWidget(status)
 
@@ -1362,7 +1360,7 @@ class SessionCard(QFrame):
         else:
             modified = "Unknown"
         modified_label = QLabel(f"Last modified: {modified}")
-        modified_label.setStyleSheet(f"color: {COLORS['text_muted']}; font-size: 11px;")
+        modified_label.setStyleSheet(f"color: {colors['text_muted']}; font-size: 11px;")
         modified_label.setWordWrap(True)
         content_layout.addWidget(modified_label)
 
@@ -1371,9 +1369,9 @@ class SessionCard(QFrame):
         # Spacer to push buttons to bottom
         layout.addStretch(1)
 
-        # Actions row - separate widget with fixed height
+        # Actions row
         actions_widget = QWidget()
-        actions_widget.setFixedHeight(28)
+        actions_widget.setMinimumHeight(48)
         actions_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         actions = QHBoxLayout(actions_widget)
         actions.setSpacing(6)
@@ -1383,23 +1381,19 @@ class SessionCard(QFrame):
         open_btn = QPushButton("Open")
         open_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {COLORS['success']};
+                background-color: {colors['success']};
                 color: white;
                 border: none;
-                border-radius: 4px;
-                padding: 2px 8px;
-                font-size: 11px;
+                border-radius: 8px;
+                padding: 4px 12px;
                 font-weight: bold;
-                min-height: 20px;
-                max-height: 24px;
-                min-width: 40px;
-                max-width: 50px;
+                min-height: 36px;
             }}
             QPushButton:hover {{
                 background-color: #27ae60;
             }}
         """)
-        open_btn.setFixedSize(50, 24)
+        open_btn.setMinimumHeight(44)
         open_btn.clicked.connect(lambda: self.open_requested.emit(self.session_id))
         open_btn.setAccessibleName(f"Open {session.title}")
         actions.addWidget(open_btn)
@@ -1408,50 +1402,42 @@ class SessionCard(QFrame):
         notes_btn = QPushButton("Notes")
         notes_btn.setStyleSheet(f"""
             QPushButton {{
-                background-color: {COLORS['primary']};
+                background-color: {colors['primary']};
                 color: white;
                 border: none;
-                border-radius: 4px;
-                padding: 2px 8px;
-                font-size: 11px;
+                border-radius: 8px;
+                padding: 4px 12px;
                 font-weight: bold;
-                min-height: 20px;
-                max-height: 24px;
-                min-width: 45px;
-                max-width: 55px;
+                min-height: 36px;
             }}
             QPushButton:hover {{
                 background-color: #5849c4;
             }}
         """)
-        notes_btn.setFixedSize(55, 24)
+        notes_btn.setMinimumHeight(44)
         notes_btn.clicked.connect(lambda: self.notes_requested.emit(self.session_id, self.session_title))
         notes_btn.setAccessibleName(f"Notes for {session.title}")
         actions.addWidget(notes_btn)
 
         actions.addStretch()
 
-        # Delete button (smaller text)
+        # Delete button
         delete_btn = QPushButton("Delete")
         delete_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: transparent;
-                color: {COLORS['error']};
-                border: 1px solid {COLORS['error']};
-                border-radius: 4px;
-                padding: 2px 6px;
-                font-size: 10px;
-                min-height: 18px;
-                max-height: 22px;
-                min-width: 40px;
-                max-width: 50px;
+                color: {colors['error']};
+                border: 1px solid {colors['error']};
+                border-radius: 8px;
+                padding: 4px 8px;
+                min-height: 36px;
             }}
             QPushButton:hover {{
-                background-color: {COLORS['error']};
+                background-color: {colors['error']};
                 color: white;
             }}
         """)
-        delete_btn.setFixedSize(50, 22)
+        delete_btn.setMinimumHeight(44)
         delete_btn.clicked.connect(lambda: self.delete_requested.emit(self.session_id))
         delete_btn.setAccessibleName(f"Delete {session.title}")
         actions.addWidget(delete_btn)
@@ -1505,6 +1491,7 @@ class NewSessionDialog(QDialog):
         self.name_input.setPlaceholderText("Enter a name for this consultation")
         self.name_input.setAccessibleName("Session name input")
         self.name_input.setMinimumHeight(48)
+        name_label.setBuddy(self.name_input)
         layout.addWidget(self.name_input)
 
         # Consultation type
@@ -1514,6 +1501,7 @@ class NewSessionDialog(QDialog):
         self.type_combo = QComboBox()
         self.type_combo.setAccessibleName("Select consultation type")
         self.type_combo.setMinimumHeight(48)
+        type_label.setBuddy(self.type_combo)
 
         for key, value in CONSULTATION_TYPES.items():
             self.type_combo.addItem(value["name"], key)
@@ -1610,7 +1598,7 @@ class DashboardWidget(QWidget):
 
         scroll_content = QWidget()
         layout = QVBoxLayout(scroll_content)
-        layout.setContentsMargins(32, 24, 32, 24)
+        layout.setContentsMargins(40, 24, 40, 24)
         layout.setSpacing(24)
 
         # Header
@@ -1631,7 +1619,7 @@ class DashboardWidget(QWidget):
         header.addLayout(title_section)
         header.addStretch()
 
-        # Header buttons
+        # Header buttons — primary action + secondary controls
         new_consult_btn = QPushButton("Start New Consultation")
         new_consult_btn.setAccessibleName("Start a new consultation")
         new_consult_btn.setToolTip("Begin a comprehensive accessibility review")
@@ -1639,28 +1627,12 @@ class DashboardWidget(QWidget):
         new_consult_btn.setMinimumHeight(44)
         header.addWidget(new_consult_btn)
 
-        overview_btn = QPushButton("Consult Overview")
-        overview_btn.setProperty("class", "secondary")
-        overview_btn.setAccessibleName("View overview of all consultations")
-        overview_btn.setToolTip("AI analysis of your learning progress and patterns")
-        overview_btn.clicked.connect(self.show_consult_overview)
-        overview_btn.setMinimumHeight(44)
-        header.addWidget(overview_btn)
-
         settings_btn = QPushButton("Settings")
         settings_btn.setProperty("class", "secondary")
         settings_btn.setAccessibleName("Open settings")
         settings_btn.clicked.connect(self.open_settings.emit)
         settings_btn.setMinimumHeight(44)
         header.addWidget(settings_btn)
-
-        tutorial_btn = QPushButton("Tutorial")
-        tutorial_btn.setProperty("class", "secondary")
-        tutorial_btn.setAccessibleName("Open tutorial")
-        tutorial_btn.setToolTip("Learn how to use the dashboard")
-        tutorial_btn.clicked.connect(self.show_tutorial)
-        tutorial_btn.setMinimumHeight(44)
-        header.addWidget(tutorial_btn)
 
         logout_btn = QPushButton("Log Out")
         logout_btn.setProperty("class", "text")
@@ -1677,7 +1649,23 @@ class DashboardWidget(QWidget):
         sessions_label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         sessions_header.addWidget(sessions_label)
 
+        sessions_header.addStretch()
+
+        tutorial_btn = QPushButton("Tutorial")
+        tutorial_btn.setProperty("class", "text")
+        tutorial_btn.setAccessibleName("Open tutorial")
+        tutorial_btn.setToolTip("Learn how to use the dashboard")
+        tutorial_btn.clicked.connect(self.show_tutorial)
+        tutorial_btn.setMinimumHeight(36)
+        sessions_header.addWidget(tutorial_btn)
+
         layout.addLayout(sessions_header)
+
+        # Section divider
+        sessions_divider = QFrame()
+        sessions_divider.setFrameShape(QFrame.Shape.HLine)
+        sessions_divider.setStyleSheet(f"background-color: {COLORS.get('dark_border', '#1c2a4a')}; max-height: 1px;")
+        layout.addWidget(sessions_divider)
 
         # Sessions scroll area
         self.sessions_area = QScrollArea()
@@ -1688,7 +1676,7 @@ class DashboardWidget(QWidget):
 
         self.sessions_container = QWidget()
         self.sessions_layout = QGridLayout(self.sessions_container)
-        self.sessions_layout.setSpacing(16)
+        self.sessions_layout.setSpacing(20)
         # Set columns to stretch equally
         self.sessions_layout.setColumnStretch(0, 1)
         self.sessions_layout.setColumnStretch(1, 1)
@@ -1706,7 +1694,23 @@ class DashboardWidget(QWidget):
         overviews_label.setFont(QFont("Arial", 18, QFont.Weight.Bold))
         overviews_header.addWidget(overviews_label)
 
+        overviews_header.addStretch()
+
+        overview_btn = QPushButton("Consult Overview")
+        overview_btn.setProperty("class", "secondary")
+        overview_btn.setAccessibleName("View overview of all consultations")
+        overview_btn.setToolTip("AI analysis of your learning progress and patterns")
+        overview_btn.clicked.connect(self.show_consult_overview)
+        overview_btn.setMinimumHeight(36)
+        overviews_header.addWidget(overview_btn)
+
         layout.addLayout(overviews_header)
+
+        # Section divider
+        overviews_divider = QFrame()
+        overviews_divider.setFrameShape(QFrame.Shape.HLine)
+        overviews_divider.setStyleSheet(f"background-color: {COLORS.get('dark_border', '#1c2a4a')}; max-height: 1px;")
+        layout.addWidget(overviews_divider)
 
         # Overviews scroll area
         self.overviews_area = QScrollArea()
@@ -1717,7 +1721,7 @@ class DashboardWidget(QWidget):
 
         self.overviews_container = QWidget()
         self.overviews_layout = QGridLayout(self.overviews_container)
-        self.overviews_layout.setSpacing(16)
+        self.overviews_layout.setSpacing(20)
         self.overviews_layout.setColumnStretch(0, 1)
         self.overviews_layout.setColumnStretch(1, 1)
         self.overviews_layout.setColumnStretch(2, 1)
@@ -1790,6 +1794,11 @@ class DashboardWidget(QWidget):
     def save_session_title(self, session_id: int, new_title: str):
         """Save updated session title."""
         self.db.update_session(session_id, title=new_title)
+
+    def refresh_styles(self):
+        """Re-apply styles after accessibility settings change, then reload cards."""
+        self.load_sessions()
+        self.load_overviews()
 
     def refresh(self):
         """Refresh the dashboard."""
