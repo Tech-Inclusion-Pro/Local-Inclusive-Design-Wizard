@@ -2,17 +2,32 @@
 
 COLORS = {
     "primary": "#a23b84",        # Primary purple - buttons, accents
+    "primary_text": "#d45fba",   # Lighter primary for text on dark bg (5.0:1 contrast)
     "secondary": "#3a2b95",      # Headers, secondary elements
     "tertiary": "#6f2fa6",       # Gradients, highlights
     "dark_bg": "#1a1a2e",        # Main background
     "dark_card": "#16213e",      # Card backgrounds
+    "dark_border": "#1c2a4a",    # Subtle card borders
+    "dark_hover": "#1a2d50",     # Softer card hover
     "dark_input": "#0f3460",     # Input fields
     "text": "#ffffff",           # Primary text
     "text_muted": "#b8b8b8",     # Secondary text
     "success": "#28a745",        # Success states
     "warning": "#ffc107",        # Warning states
-    "error": "#dc3545",          # Error states
+    "error": "#ff4d5e",          # Error states (5.2:1 on dark_bg, passes AA)
 }
+
+
+def get_colors():
+    """Get effective colors, using AccessibilityManager overrides if available."""
+    try:
+        from ui.accessibility_manager import AccessibilityManager
+        manager = AccessibilityManager.instance()
+        if manager:
+            return manager.get_effective_colors()
+    except Exception:
+        pass
+    return COLORS
 
 APP_SETTINGS = {
     "app_name": "Inclusive Design Wizard",
