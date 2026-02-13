@@ -65,7 +65,7 @@ class PasswordRecoveryDialog(QDialog):
         title.setStyleSheet(f"""
             font-size: 20px;
             font-weight: bold;
-            color: {COLORS['primary']};
+            color: {COLORS['primary_text']};
         """)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(title)
@@ -142,7 +142,7 @@ class PasswordRecoveryDialog(QDialog):
 
         find_btn = QPushButton("Find Account")
         find_btn.clicked.connect(self._on_find_account)
-        find_btn.setFixedHeight(40)
+        find_btn.setFixedHeight(44)
         find_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {COLORS['primary']};
@@ -217,7 +217,7 @@ class PasswordRecoveryDialog(QDialog):
 
         verify_btn = QPushButton("Verify Answers")
         verify_btn.clicked.connect(self._on_verify_answers)
-        verify_btn.setFixedHeight(40)
+        verify_btn.setFixedHeight(44)
         verify_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {COLORS['primary']};
@@ -289,7 +289,7 @@ class PasswordRecoveryDialog(QDialog):
 
         reset_btn = QPushButton("Reset Password")
         reset_btn.clicked.connect(self._on_reset_password)
-        reset_btn.setFixedHeight(40)
+        reset_btn.setFixedHeight(44)
         reset_btn.setStyleSheet(f"""
             QPushButton {{
                 background-color: {COLORS['primary']};
@@ -310,7 +310,7 @@ class PasswordRecoveryDialog(QDialog):
         """Handle finding account by email."""
         email = self.recovery_email.text().strip()
         if not email:
-            self.email_error.setText("Please enter your email")
+            self.email_error.setText("\u26A0 Error: Please enter your email")
             self.email_error.show()
             return
 
@@ -322,7 +322,7 @@ class PasswordRecoveryDialog(QDialog):
             self.email_section.hide()
             self.questions_section.show()
         else:
-            self.email_error.setText(message)
+            self.email_error.setText(f"\u26A0 Error: {message}")
             self.email_error.show()
 
     def _on_verify_answers(self):
@@ -331,7 +331,7 @@ class PasswordRecoveryDialog(QDialog):
         answer2 = self.answer2_input.text().strip()
 
         if not answer1 or not answer2:
-            self.questions_error.setText("Please answer both questions")
+            self.questions_error.setText("\u26A0 Error: Please answer both questions")
             self.questions_error.show()
             return
 
@@ -340,7 +340,7 @@ class PasswordRecoveryDialog(QDialog):
             self.questions_section.hide()
             self.reset_section.show()
         else:
-            self.questions_error.setText(message)
+            self.questions_error.setText(f"\u26A0 Error: {message}")
             self.questions_error.show()
 
     def _on_reset_password(self):
@@ -349,17 +349,17 @@ class PasswordRecoveryDialog(QDialog):
         confirm = self.confirm_password.text()
 
         if not new_pass or not confirm:
-            self.reset_error.setText("Please fill in both fields")
+            self.reset_error.setText("\u26A0 Error: Please fill in both fields")
             self.reset_error.show()
             return
 
         if new_pass != confirm:
-            self.reset_error.setText("Passwords do not match")
+            self.reset_error.setText("\u26A0 Error: Passwords do not match")
             self.reset_error.show()
             return
 
         if len(new_pass) < 8:
-            self.reset_error.setText("Password must be at least 8 characters")
+            self.reset_error.setText("\u26A0 Error: Password must be at least 8 characters")
             self.reset_error.show()
             return
 
@@ -368,7 +368,7 @@ class PasswordRecoveryDialog(QDialog):
             QMessageBox.information(self, "Success", "Your password has been reset. You can now log in.")
             self.accept()
         else:
-            self.reset_error.setText(message)
+            self.reset_error.setText(f"\u26A0 Error: {message}")
             self.reset_error.show()
 
 
@@ -430,12 +430,13 @@ class LoginWidget(QWidget):
         container.setStyleSheet(f"""
             QFrame {{
                 background-color: {COLORS['dark_card']};
-                border-radius: 16px;
+                border-radius: 20px;
+                border-bottom: 2px solid {COLORS.get('dark_border', '#1c2a4a')};
             }}
         """)
 
         container_layout = QVBoxLayout(container)
-        container_layout.setContentsMargins(32, 32, 32, 32)
+        container_layout.setContentsMargins(36, 36, 36, 36)
         container_layout.setSpacing(16)
 
         # Logo
@@ -460,7 +461,7 @@ class LoginWidget(QWidget):
         title.setStyleSheet(f"""
             font-size: 24px;
             font-weight: bold;
-            color: {COLORS['primary']};
+            color: {COLORS['primary_text']};
             margin-bottom: 4px;
         """)
         container_layout.addWidget(title)
@@ -477,8 +478,8 @@ class LoginWidget(QWidget):
         self.tabs = QTabWidget()
         self.tabs.setStyleSheet(f"""
             QTabWidget::pane {{
-                border: 1px solid {COLORS['dark_input']};
-                border-radius: 8px;
+                border: 1px solid {COLORS.get('dark_border', '#1c2a4a')};
+                border-radius: 10px;
                 background-color: {COLORS['dark_bg']};
                 padding: 24px;
                 min-height: 350px;
@@ -490,8 +491,8 @@ class LoginWidget(QWidget):
                 color: {COLORS['text_muted']};
                 border: 1px solid {COLORS['dark_input']};
                 border-bottom: none;
-                border-radius: 8px 8px 0 0;
-                font-size: 14pt;
+                border-radius: 10px 10px 0 0;
+                font-size: 12pt;
                 font-weight: bold;
                 min-width: 80px;
             }}
@@ -557,7 +558,8 @@ class LoginWidget(QWidget):
         layout.setContentsMargins(9, 17, 9, 9)
 
         # Email label
-        layout.addWidget(self._create_field_label("Email"))
+        email_label = self._create_field_label("Email")
+        layout.addWidget(email_label)
         layout.addSpacing(5)
 
         # Email input field
@@ -565,11 +567,13 @@ class LoginWidget(QWidget):
         self.login_email.setPlaceholderText("Enter your email")
         self.login_email.setAccessibleName("Login email")
         self._apply_input_style(self.login_email)
+        email_label.setBuddy(self.login_email)
         layout.addWidget(self.login_email)
-        layout.addSpacing(50)
+        layout.addSpacing(16)
 
         # Password label
-        layout.addWidget(self._create_field_label("Password"))
+        password_label = self._create_field_label("Password")
+        layout.addWidget(password_label)
         layout.addSpacing(5)
 
         # Password input field
@@ -579,8 +583,9 @@ class LoginWidget(QWidget):
         self.login_password.setAccessibleName("Login password")
         self.login_password.returnPressed.connect(self.on_login)
         self._apply_input_style(self.login_password)
+        password_label.setBuddy(self.login_password)
         layout.addWidget(self.login_password)
-        layout.addSpacing(140)
+        layout.addSpacing(20)
 
         # Remember login checkbox
         self.remember_login_cb = QCheckBox("Remember login info")
@@ -606,7 +611,7 @@ class LoginWidget(QWidget):
             }}
         """)
         layout.addWidget(self.remember_login_cb)
-        layout.addSpacing(140)
+        layout.addSpacing(20)
 
         # Error label
         self.login_error = QLabel("")
@@ -619,7 +624,7 @@ class LoginWidget(QWidget):
         login_btn = QPushButton("Login")
         login_btn.clicked.connect(self.on_login)
         login_btn.setStyleSheet(self._get_button_style(primary=True))
-        login_btn.setFixedHeight(21)
+        login_btn.setMinimumHeight(48)
         login_btn.setMinimumWidth(200)
         login_btn.setAccessibleName("Login to your account")
         layout.addWidget(login_btn)
@@ -633,7 +638,7 @@ class LoginWidget(QWidget):
             QPushButton {{
                 background: none;
                 border: none;
-                color: {COLORS['primary']};
+                color: {COLORS['primary_text']};
                 text-decoration: underline;
                 font-size: 11pt;
                 padding: 4px;
@@ -687,37 +692,43 @@ class LoginWidget(QWidget):
         layout.setContentsMargins(8, 20, 8, 8)
 
         # Email field
-        layout.addWidget(self._create_field_label("Email"))
-        layout.addSpacing(8)
+        reg_email_label = self._create_field_label("Email")
+        layout.addWidget(reg_email_label)
+        layout.addSpacing(4)
         self.register_email = QLineEdit()
         self.register_email.setPlaceholderText("Enter your email")
         self.register_email.setAccessibleName("Registration email")
         self._apply_input_style(self.register_email)
+        reg_email_label.setBuddy(self.register_email)
         layout.addWidget(self.register_email)
-        layout.addSpacing(20)
+        layout.addSpacing(16)
 
         # Password field
-        layout.addWidget(self._create_field_label("Password"))
-        layout.addSpacing(8)
+        reg_pass_label = self._create_field_label("Password")
+        layout.addWidget(reg_pass_label)
+        layout.addSpacing(4)
         self.register_password = QLineEdit()
         self.register_password.setPlaceholderText("Create a password (8+ characters)")
         self.register_password.setEchoMode(QLineEdit.EchoMode.Password)
         self.register_password.setAccessibleName("Create password")
         self._apply_input_style(self.register_password)
+        reg_pass_label.setBuddy(self.register_password)
         layout.addWidget(self.register_password)
-        layout.addSpacing(20)
+        layout.addSpacing(16)
 
         # Confirm password field
-        layout.addWidget(self._create_field_label("Confirm Password"))
-        layout.addSpacing(8)
+        reg_confirm_label = self._create_field_label("Confirm Password")
+        layout.addWidget(reg_confirm_label)
+        layout.addSpacing(4)
         self.register_confirm = QLineEdit()
         self.register_confirm.setPlaceholderText("Confirm your password")
         self.register_confirm.setEchoMode(QLineEdit.EchoMode.Password)
         self.register_confirm.setAccessibleName("Confirm password")
         self.register_confirm.returnPressed.connect(self.on_register)
         self._apply_input_style(self.register_confirm)
+        reg_confirm_label.setBuddy(self.register_confirm)
         layout.addWidget(self.register_confirm)
-        layout.addSpacing(20)
+        layout.addSpacing(16)
 
         # Show password checkbox
         self.show_reg_password_cb = QCheckBox("Show passwords")
@@ -751,7 +762,7 @@ class LoginWidget(QWidget):
         security_label.setStyleSheet(f"""
             font-weight: bold;
             font-size: 12pt;
-            color: {COLORS['primary']};
+            color: {COLORS['primary_text']};
         """)
         layout.addWidget(security_label)
         layout.addSpacing(12)
@@ -843,7 +854,7 @@ class LoginWidget(QWidget):
         register_btn = QPushButton("Create Account")
         register_btn.clicked.connect(self.on_register)
         register_btn.setStyleSheet(self._get_button_style(primary=True))
-        register_btn.setFixedHeight(42)
+        register_btn.setMinimumHeight(48)
         register_btn.setMinimumWidth(200)
         register_btn.setAccessibleName("Create a new account")
         layout.addWidget(register_btn)
@@ -863,12 +874,12 @@ class LoginWidget(QWidget):
             font-size: 13pt;
             color: {COLORS['text']};
         """)
-        label.setFixedHeight(28)
+        label.setMinimumHeight(28)
         return label
 
     def _apply_input_style(self, widget: QLineEdit):
         """Apply consistent input field styling."""
-        widget.setFixedHeight(32)
+        widget.setMinimumHeight(44)
         widget.setFont(QFont("Arial", 12))
         widget.setStyleSheet(f"""
             QLineEdit {{
@@ -897,7 +908,7 @@ class LoginWidget(QWidget):
                     border: none;
                     border-radius: 6px;
                     padding: 8px 16px;
-                    font-size: 26pt;
+                    font-size: 16pt;
                     font-weight: bold;
                 }}
                 QPushButton:hover {{
@@ -1049,14 +1060,52 @@ class LoginWidget(QWidget):
         else:
             QMessageBox.warning(self, "Error", message)
 
+    def refresh_styles(self):
+        """Re-apply key inline styles after accessibility settings change."""
+        from config.settings import get_colors
+        colors = get_colors()
+        # Re-apply scroll area scrollbar styles
+        scroll_style = f"""
+            QScrollArea {{
+                border: none;
+                background-color: transparent;
+            }}
+            QScrollBar:vertical {{
+                background-color: {colors['dark_bg']};
+                width: 10px;
+                border-radius: 5px;
+            }}
+            QScrollBar::handle:vertical {{
+                background-color: {colors['dark_input']};
+                border-radius: 5px;
+                min-height: 20px;
+            }}
+            QScrollBar::handle:vertical:hover {{
+                background-color: {colors['primary']};
+            }}
+        """
+        for scroll in self.findChildren(QScrollArea):
+            scroll.setStyleSheet(scroll_style)
+        # Re-apply container card background
+        for frame in self.findChildren(QFrame):
+            ss = frame.styleSheet()
+            if 'border-radius: 20px' in ss:
+                frame.setStyleSheet(f"""
+                    QFrame {{
+                        background-color: {colors['dark_card']};
+                        border-radius: 20px;
+                        border-bottom: 2px solid {colors.get('dark_border', '#1c2a4a')};
+                    }}
+                """)
+
     def show_login_error(self, message: str):
         """Show error in login form."""
-        self.login_error.setText(message)
+        self.login_error.setText(f"\u26A0 Error: {message}")
         self.login_error.show()
         self.login_error.setAccessibleDescription(f"Error: {message}")
 
     def show_register_error(self, message: str):
         """Show error in register form."""
-        self.register_error.setText(message)
+        self.register_error.setText(f"\u26A0 Error: {message}")
         self.register_error.show()
         self.register_error.setAccessibleDescription(f"Error: {message}")
