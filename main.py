@@ -18,32 +18,34 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPalette, QColor
 
 from config.settings import COLORS, APP_SETTINGS
-from ui.main_window import MainWindow
 
 
 def setup_palette(app: QApplication):
     """Set up the dark color palette."""
+    from config.settings import get_colors
+    colors = get_colors()
+
     palette = QPalette()
 
     # Base colors
-    palette.setColor(QPalette.ColorRole.Window, QColor(COLORS["dark_bg"]))
-    palette.setColor(QPalette.ColorRole.WindowText, QColor(COLORS["text"]))
-    palette.setColor(QPalette.ColorRole.Base, QColor(COLORS["dark_input"]))
-    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(COLORS["dark_card"]))
-    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(COLORS["dark_card"]))
-    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(COLORS["text"]))
-    palette.setColor(QPalette.ColorRole.Text, QColor(COLORS["text"]))
-    palette.setColor(QPalette.ColorRole.Button, QColor(COLORS["primary"]))
-    palette.setColor(QPalette.ColorRole.ButtonText, QColor(COLORS["text"]))
-    palette.setColor(QPalette.ColorRole.BrightText, QColor(COLORS["text"]))
-    palette.setColor(QPalette.ColorRole.Link, QColor(COLORS["primary"]))
-    palette.setColor(QPalette.ColorRole.Highlight, QColor(COLORS["primary"]))
-    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(COLORS["text"]))
+    palette.setColor(QPalette.ColorRole.Window, QColor(colors["dark_bg"]))
+    palette.setColor(QPalette.ColorRole.WindowText, QColor(colors["text"]))
+    palette.setColor(QPalette.ColorRole.Base, QColor(colors["dark_input"]))
+    palette.setColor(QPalette.ColorRole.AlternateBase, QColor(colors["dark_card"]))
+    palette.setColor(QPalette.ColorRole.ToolTipBase, QColor(colors["dark_card"]))
+    palette.setColor(QPalette.ColorRole.ToolTipText, QColor(colors["text"]))
+    palette.setColor(QPalette.ColorRole.Text, QColor(colors["text"]))
+    palette.setColor(QPalette.ColorRole.Button, QColor(colors["primary"]))
+    palette.setColor(QPalette.ColorRole.ButtonText, QColor(colors["text"]))
+    palette.setColor(QPalette.ColorRole.BrightText, QColor(colors["text"]))
+    palette.setColor(QPalette.ColorRole.Link, QColor(colors["primary"]))
+    palette.setColor(QPalette.ColorRole.Highlight, QColor(colors["primary"]))
+    palette.setColor(QPalette.ColorRole.HighlightedText, QColor(colors["text"]))
 
     # Disabled colors
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(COLORS["text_muted"]))
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(COLORS["text_muted"]))
-    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(COLORS["text_muted"]))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.WindowText, QColor(colors["text_muted"]))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.Text, QColor(colors["text_muted"]))
+    palette.setColor(QPalette.ColorGroup.Disabled, QPalette.ColorRole.ButtonText, QColor(colors["text_muted"]))
 
     app.setPalette(palette)
 
@@ -72,6 +74,7 @@ def main():
     app.setFont(font)
 
     # Create and show main window
+    from ui.main_window import MainWindow
     window = MainWindow()
     window.show()
 
