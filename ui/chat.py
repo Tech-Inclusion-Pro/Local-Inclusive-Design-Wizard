@@ -245,13 +245,15 @@ class MessageBubble(QFrame):
     def setup_ui(self, content: str):
         """Set up the message bubble UI."""
         is_user = self.role == "user"
+        border_color = COLORS['tertiary'] if is_user else COLORS.get('dark_border', '#1c2a4a')
 
         self.setStyleSheet(f"""
             QFrame {{
                 background-color: {COLORS['primary'] if is_user else COLORS['dark_card']};
+                border: 1px solid {border_color};
                 border-radius: 16px;
-                padding: 12px 16px;
-                margin: 4px 0;
+                padding: 16px 20px;
+                margin: 8px 0;
             }}
         """)
 
@@ -285,6 +287,22 @@ class MessageBubble(QFrame):
                     widget.setText(content)
                     break
 
+    def update_style(self):
+        """Re-apply bubble style with current colors."""
+        from config.settings import get_colors
+        c = get_colors()
+        is_user = self.role == "user"
+        border_color = c['tertiary'] if is_user else c.get('dark_border', '#1c2a4a')
+        self.setStyleSheet(f"""
+            QFrame {{
+                background-color: {c['primary'] if is_user else c['dark_card']};
+                border: 1px solid {border_color};
+                border-radius: 16px;
+                padding: 16px 20px;
+                margin: 8px 0;
+            }}
+        """)
+
 
 class PhaseIndicator(QFrame):
     """Phase progress indicator widget."""
@@ -310,8 +328,8 @@ class PhaseIndicator(QFrame):
         self.setStyleSheet(f"""
             QFrame {{
                 background-color: {bg_color};
-                border-radius: 8px;
-                padding: 8px 12px;
+                border-radius: 10px;
+                padding: 10px 14px;
                 margin: 2px 0;
             }}
         """)
@@ -685,6 +703,19 @@ class ChatWidget(QWidget):
         self.message_input.setAccessibleName("Message input")
         self.message_input.setMaximumHeight(120)
         self.message_input.setMinimumHeight(60)
+        self.message_input.setStyleSheet(f"""
+            QTextEdit {{
+                background-color: {COLORS['dark_input']};
+                color: {COLORS['text']};
+                border: 1px solid {COLORS.get('dark_border', '#1c2a4a')};
+                border-radius: 12px;
+                padding: 14px;
+                font-size: 16px;
+            }}
+            QTextEdit:focus {{
+                border-color: {COLORS['primary']};
+            }}
+        """)
         input_area.addWidget(self.message_input)
 
         self.send_btn = QPushButton("Send")
@@ -700,7 +731,10 @@ class ChatWidget(QWidget):
 
         # Right panel - Progress sidebar with scroll
         sidebar_container = QWidget()
-        sidebar_container.setStyleSheet(f"background-color: {COLORS['dark_card']};")
+        sidebar_container.setStyleSheet(f"""
+            background-color: {COLORS['dark_card']};
+            border-left: 1px solid {COLORS.get('dark_border', '#1c2a4a')};
+        """)
         sidebar_container.setMinimumWidth(280)
         sidebar_container.setMaximumWidth(350)
 
@@ -733,7 +767,7 @@ class ChatWidget(QWidget):
 
         sidebar = QWidget()
         sidebar_layout = QVBoxLayout(sidebar)
-        sidebar_layout.setContentsMargins(16, 16, 16, 16)
+        sidebar_layout.setContentsMargins(20, 20, 20, 20)
         sidebar_layout.setSpacing(16)
 
         # Progress header
@@ -786,7 +820,7 @@ class ChatWidget(QWidget):
         ]
 
         for name, url in resources:
-            link = QLabel(f'<a href="{url}" style="color: {COLORS["primary"]};">{name}</a>')
+            link = QLabel(f'<a href="{url}" style="color: {COLORS["primary_text"]};">{name}</a>')
             link.setOpenExternalLinks(True)
             link.setStyleSheet("font-size: 14px;")
             sidebar_layout.addWidget(link)
@@ -1078,6 +1112,14 @@ class ChatWidget(QWidget):
                     "Export Failed",
                     "Failed to export consultation. Please try again."
                 )
+
+    def refresh_styles(self):
+        """Re-apply styles after accessibility settings change."""
+        # Update existing message bubbles with new colors
+        for i in range(self.messages_layout.count()):
+            item = self.messages_layout.itemAt(i)
+            if item and item.widget() and isinstance(item.widget(), MessageBubble):
+                item.widget().update_style()
 
     def show_tutorial(self):
         """Show the chat tutorial."""
